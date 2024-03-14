@@ -85,9 +85,9 @@ def layer_stats(
     sample_size=None,
     precision=None,
     batch_tokens=None,
-    download=False,
+    download=True,
     progress=tqdm,
-    force_recompute=False,
+    force_recompute=True,
 ):
     """
     Function to load or compute cached stats.

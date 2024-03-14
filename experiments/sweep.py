@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--alg_name", choices=["MEMIT", "FT", "ROME", "MEND"], required=True
+        "--alg_name", choices=["NMEMIT", "MEMIT", "FT", "ROME", "MEND"], required=True
     )
     parser.add_argument(
         "--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"], required=True

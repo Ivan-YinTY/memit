@@ -99,12 +99,15 @@ def load_alg(alg_name):
         "MEND-zsRE",
         "ROME",
         "MEMIT",
+        "NEMIT",
     ]
 
     if alg_name == "ROME":
         return ROMEHyperParams, apply_rome_to_model, "ROME", ""
     elif alg_name == "MEMIT":
         return MEMITHyperParams, apply_memit_to_model, "MEMIT", ""
+    elif alg_name == "NMEMIT":
+        return MEMITHyperParams, apply_memit_to_model, "NMEMIT", ""
     elif "FT" in alg_name:
         d = {
             "FT": (FTHyperParams, apply_ft_to_model, "FT", "_unconstr"),

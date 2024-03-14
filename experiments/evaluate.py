@@ -18,12 +18,13 @@ from dsets import (
 )
 from experiments.py.eval_utils_counterfact import compute_rewrite_quality_counterfact
 from experiments.py.eval_utils_zsre import compute_rewrite_quality_zsre
-from memit import MEMITHyperParams, apply_memit_to_model
+from nmemitmemit import NMEMITHyperParams, apply_memit_to_model
 from rome import ROMEHyperParams, apply_rome_to_model
 from util import nethook
 from util.globals import *
 
 ALG_DICT = {
+    "NMEMIT": (NMEMITHyperParams, apply_memit_to_model),
     "MEMIT": (MEMITHyperParams, apply_memit_to_model),
     "ROME": (ROMEHyperParams, apply_rome_to_model),
     "FT": (FTHyperParams, apply_ft_to_model),
