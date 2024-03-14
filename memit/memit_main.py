@@ -66,6 +66,7 @@ def execute_memit(
     requests: List[Dict],
     hparams: MEMITHyperParams,
     cache_template: Optional[str] = None,
+    test_mode: bool = True,
 ) -> Dict[str, Tuple[torch.Tensor]]:
     """
     Executes the MEMIT update algorithm for the specified update at the specified layer
@@ -102,30 +103,31 @@ def execute_memit(
     z_list = []
 
     for request in requests:
-        # Retrieve k/v pair if already stored in cache
-        cache_fname = (
-            Path(
-                str(cache_template).format(
-                    z_layer, hparams.clamp_norm_factor, request["case_id"]
-                )
-            )
-            if cache_template is not None
-            else None
-        )
         data_loaded = False
-        if (
-            cache_fname is not None  # Require cache template
-            and cache_fname.exists()  # Cache file must exist
-        ):
-            try:
-                data = np.load(cache_fname)
-                z_list.append(torch.from_numpy(data["v_star"]).to("cuda"))
-                data_loaded = True
-            except Exception as e:
-                print(f"Error reading cache file due to {e}. Recomputing...")
+        if not test_mode:  # 当 test_mode 为 False 时，尝试从缓存加载数据
+            # Retrieve k/v pair if already stored in cache
+            cache_fname = (
+                Path(
+                    str(cache_template).format(
+                        z_layer, hparams.clamp_norm_factor, request["case_id"]
+                    )
+                )
+                if cache_template is not None
+                else None
+            )
+            if (
+                cache_fname is not None  # Require cache template
+                and cache_fname.exists()  # Cache file must exist
+            ):
+                try:
+                    data = np.load(cache_fname)
+                    z_list.append(torch.from_numpy(data["v_star"]).to("cuda"))
+                    data_loaded = True
+                except Exception as e:
+                    print(f"Error reading cache file due to {e}. Recomputing...")
 
-        # Compute k/v pair if not loaded from cache
-        if not data_loaded:
+        # Compute k/v pair if not loaded from cache or if test_mode is True
+        if not data_loaded or test_mode:  # 当 test_mode 为 True 时，总是重新计算
             cur_z = compute_z(
                 model,
                 tok,
@@ -137,7 +139,7 @@ def execute_memit(
 
             z_list.append(cur_z)
 
-            if cache_fname is not None:
+            if cache_fname is not None and not test_mode:  # 仅当 test_mode 为 False 时，才缓存数据
                 cache_fname.parent.mkdir(exist_ok=True, parents=True)
                 np.savez(
                     cache_fname,
