@@ -85,7 +85,7 @@ def layer_stats(
     sample_size=None,
     precision=None,
     batch_tokens=None,
-    download=True,
+    download=False,
     progress=tqdm,
     force_recompute=False,
 ):

@@ -104,6 +104,7 @@ def execute_memit(
 
     for request in requests:
         data_loaded = False
+        cache_fname = None
         if not test_mode:  # 当 test_mode 为 False 时，尝试从缓存加载数据
             # Retrieve k/v pair if already stored in cache
             cache_fname = (
