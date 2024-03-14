@@ -7,6 +7,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from baselines.ft import FTHyperParams, apply_ft_to_model
 from memit import MEMITHyperParams, apply_memit_to_model
+from nmemit import NMEMITHyperParams, apply_memit_to_model
 from rome import ROMEHyperParams, apply_rome_to_model
 from util import nethook
 from util.generate import generate_fast
@@ -99,7 +100,7 @@ def load_alg(alg_name):
         "MEND-zsRE",
         "ROME",
         "MEMIT",
-        "NEMIT",
+        "NMEMIT",
     ]
 
     if alg_name == "ROME":
@@ -107,7 +108,7 @@ def load_alg(alg_name):
     elif alg_name == "MEMIT":
         return MEMITHyperParams, apply_memit_to_model, "MEMIT", ""
     elif alg_name == "NMEMIT":
-        return MEMITHyperParams, apply_memit_to_model, "NMEMIT", ""
+        return NMEMITHyperParams, apply_memit_to_model, "NMEMIT", ""
     elif "FT" in alg_name:
         d = {
             "FT": (FTHyperParams, apply_ft_to_model, "FT", "_unconstr"),
