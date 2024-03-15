@@ -102,6 +102,16 @@ def compute_z(
     opt = torch.optim.Adam([delta], lr=hparams.v_lr)
     nethook.set_requires_grad(False, model)
 
+    # 在优化循环开始前计算初始的负对数似然损失
+    with torch.no_grad():
+        initial_logits = model(**input_tok).logits
+        initial_log_probs = torch.log_softmax(ln_f(initial_logits) @ lm_w + lm_b, dim=2)
+        initial_nll_loss = -torch.gather(
+            initial_log_probs,
+            2,
+            target_ids.unsqueeze(2)
+        ).squeeze(2)
+
     # Execute optimization
     for it in range(hparams.v_num_grad_steps):
         opt.zero_grad()
@@ -150,14 +160,23 @@ def compute_z(
         # Aggregate total losses
         nll_loss_each = -(loss * mask).sum(1) / target_ids.size(0)
         nll_loss = nll_loss_each.mean()
+        # 计算当前的负对数似然损失
+        current_log_probs = torch.log_softmax(ln_f(logits) @ lm_w + lm_b, dim=2)
+        current_nll_loss = -torch.gather(
+            current_log_probs,
+            2,
+            target_ids.unsqueeze(2)
+        ).squeeze(2)
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
         )
         weight_decay = hparams.v_weight_decay * (
             torch.norm(delta) / torch.norm(target_init) ** 2
         )
+        # 计算neg_nll_loss，即当前输出与初始输出之间的距离
+        neg_nll_loss = (initial_nll_loss - current_nll_loss).mean()
         # weight_decay = hparams.v_weight_decay * torch.norm(delta) ** 2
-        loss = nll_loss + kl_loss + weight_decay
+        loss = nll_loss - hparams.neg_factor * neg_nll_loss + kl_loss + weight_decay
         print(
             f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
             f"avg prob of [{request['target_new']['str']}] "
