@@ -106,7 +106,16 @@ def compute_z(
     for it in range(hparams.v_num_grad_steps):
         opt.zero_grad()
 
-        # Forward propagation
+        # Forward propagation to get initial prediction for negative sample
+        with torch.no_grad():
+            initial_logits = model(**input_tok).logits
+            # Assuming the negative sample is at the same token index as the positive sample
+            neg_sample_logits = initial_logits[:, lookup_idxs[0], :]
+            neg_sample_log_probs = torch.nn.functional.log_softmax(neg_sample_logits, dim=1)
+            # Get the top predicted token as the negative sample
+            neg_sample_ids = neg_sample_log_probs.argmax(dim=1, keepdim=True)
+
+        # Forward propagation with edited output
         with nethook.TraceDict(
             module=model,
             layers=[
@@ -143,6 +152,14 @@ def compute_z(
         ).squeeze(2)
         mask = (rewriting_targets != -100).float()
 
+        # Compute loss with respect to the negative sample
+        neg_loss = torch.gather(
+            log_probs,
+            2,
+            neg_sample_ids.unsqueeze(2).repeat(1, 1, log_probs.size(2)),
+        ).squeeze(2)
+        neg_loss = neg_loss.mean()
+
         # Aggregate total losses
         nll_loss_each = -(loss * mask).sum(1) / target_ids.size(0)
         nll_loss = nll_loss_each.mean()
@@ -153,9 +170,10 @@ def compute_z(
             torch.norm(delta) / torch.norm(target_init) ** 2
         )
         # weight_decay = hparams.v_weight_decay * torch.norm(delta) ** 2
-        loss = nll_loss + kl_loss + weight_decay
+        # Now we include the negative loss, which we want to maximize (hence the minus sign)
+        loss = nll_loss - hparams.neg_factor * neg_loss + kl_loss + weight_decay
         print(
-            f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
+            f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} - {np.round(hparams.neg_factor * neg_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
             f"avg prob of [{request['target_new']['str']}] "
             f"{torch.exp(-nll_loss_each).mean().item()}"
         )
