@@ -108,12 +108,14 @@ def compute_z(
 
         # Forward propagation to get initial prediction for negative sample
         with torch.no_grad():
-            initial_logits = model(**input_tok).logits
-            # Assuming the negative sample is at the same token index as the positive sample
-            neg_sample_logits = initial_logits[:, lookup_idxs[0], :]
-            neg_sample_log_probs = torch.nn.functional.log_softmax(neg_sample_logits, dim=1)
-            # Get the top predicted token as the negative sample
-            neg_sample_ids = neg_sample_log_probs.argmax(dim=1, keepdim=True)
+                initial_logits = model(**input_tok).logits
+                # Assuming the negative sample is at the same token index as the positive sample
+                neg_sample_logits = initial_logits[:, lookup_idxs[0], :]
+                neg_sample_log_probs = torch.nn.functional.log_softmax(neg_sample_logits, dim=1)
+                # Get the top predicted token as the negative sample
+                neg_sample_ids = neg_sample_log_probs.argmax(dim=1, keepdim=True)
+        
+        neg_sample_ids = neg_sample_ids[:log_probs.size(0)]
 
         # Forward propagation with edited output
         with nethook.TraceDict(
@@ -153,10 +155,11 @@ def compute_z(
         mask = (rewriting_targets != -100).float()
 
         # Compute loss with respect to the negative sample
+        neg_sample_ids = neg_sample_ids.unsqueeze(-1).expand(-1, -1, log_probs.size(-1))
         neg_loss = torch.gather(
             log_probs,
             2,
-            neg_sample_ids.unsqueeze(2).repeat(1, 1, log_probs.size(2)),
+            neg_sample_ids
         ).squeeze(2)
         neg_loss = neg_loss.mean()
 
