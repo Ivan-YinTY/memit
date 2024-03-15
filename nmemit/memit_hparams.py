@@ -18,6 +18,7 @@ class NMEMITHyperParams(HyperParams):
     v_weight_decay: float
     clamp_norm_factor: float
     kl_factor: float
+    neg_factor: float
     mom2_adjustment: bool
     mom2_update_weight: float
 
