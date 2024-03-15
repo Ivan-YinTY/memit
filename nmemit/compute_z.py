@@ -108,14 +108,17 @@ def compute_z(
 
         # Forward propagation to get initial prediction for negative sample
         with torch.no_grad():
-                initial_logits = model(**input_tok).logits
-                # Assuming the negative sample is at the same token index as the positive sample
-                neg_sample_logits = initial_logits[:, lookup_idxs[0], :]
-                neg_sample_log_probs = torch.nn.functional.log_softmax(neg_sample_logits, dim=1)
-                # Get the top predicted token as the negative sample
-                neg_sample_ids = neg_sample_log_probs.argmax(dim=1, keepdim=True)
-        
-        neg_sample_ids = neg_sample_ids[:log_probs.size(0)]
+            initial_logits = model(**input_tok).logits
+            # Assuming the negative sample is at the same token index as the positive sample
+            neg_sample_logits = initial_logits[:, lookup_idxs[0], :]
+            neg_sample_log_probs = torch.nn.functional.log_softmax(neg_sample_logits, dim=1)
+            # Get the top predicted token as the negative sample
+            neg_sample_ids = neg_sample_log_probs.argmax(dim=1, keepdim=True)
+
+        # Ensure neg_sample_ids has the same batch size as log_probs
+        # and expand it to match the dimensions for the gather operation
+        neg_sample_ids = neg_sample_ids[:log_probs.size(0)].unsqueeze(-1)
+        neg_sample_ids = neg_sample_ids.expand(-1, -1, log_probs.size(-1))
 
         # Forward propagation with edited output
         with nethook.TraceDict(
