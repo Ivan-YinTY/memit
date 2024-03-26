@@ -103,14 +103,14 @@ def compute_z(
     nethook.set_requires_grad(False, model)
 
     # 在优化循环开始前计算初始的负对数似然损失
-    with torch.no_grad():
-        initial_logits = model(**input_tok).logits
-        initial_log_probs = torch.log_softmax(ln_f(initial_logits) @ lm_w + lm_b, dim=2)
-        initial_nll_loss = -torch.gather(
-            initial_log_probs,
-            2,
-            target_ids.unsqueeze(2)
-        ).squeeze(2)
+    # with torch.no_grad():
+    #     initial_logits = model(**input_tok).logits
+    #     initial_log_probs = torch.log_softmax(ln_f(initial_logits) @ lm_w + lm_b, dim=2)
+    #     initial_nll_loss = -torch.gather(
+    #         initial_log_probs,
+    #         2,
+    #         target_ids.unsqueeze(2)
+    #     ).squeeze(2)
 
     # Execute optimization
     for it in range(hparams.v_num_grad_steps):
@@ -119,6 +119,12 @@ def compute_z(
         # Forward propagation to get initial prediction for negative sample
         with torch.no_grad():
             initial_logits = model(**input_tok).logits
+            initial_log_probs = torch.log_softmax(ln_f(initial_logits) @ lm_w + lm_b, dim=2)
+            initial_nll_loss = -torch.gather(
+                initial_log_probs,
+                2,
+                target_ids.unsqueeze(2)
+            ).squeeze(2)
 
         # Forward propagation with edited output
         with nethook.TraceDict(

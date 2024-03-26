@@ -3,7 +3,7 @@
 #SBATCH -p A800
 #SBATCH -n 2
 #SBATCH -N 1
-#SBATCH --gres=gpu:a800:2
+#SBATCH --gres=gpu:a800:1
 
 python -m experiments.evaluate \
     --alg_name=MEMIT \
